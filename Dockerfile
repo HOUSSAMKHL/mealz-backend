@@ -1,6 +1,6 @@
 FROM php:8.2-fpm
 
-# Installer les dépendances
+# Installer les dépendances de base
 RUN apt-get update && apt-get install -y \
     libpng-dev \
     libjpeg-dev \
@@ -10,20 +10,20 @@ RUN apt-get update && apt-get install -y \
     curl \
     git \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd pdo pdo_mysql
+    && docker-php-ext-install gd pdo pdo_mysql \
+    && rm -rf /var/lib/apt/lists/*
 
 # Installer Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copier le projet Laravel
+# Définir le dossier de travail
 WORKDIR /var/www
+
+# Copier le projet Laravel
 COPY . .
 
-# Installer les dépendances Laravel
-RUN composer install --no-dev --optimize-autoloader
-
-# Définir les permissions
-RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
+# Installer les dépendances Laravel sans blocage
+RUN COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader --no-progress --no-suggest
 
 # Exposer le port
 EXPOSE 9000
