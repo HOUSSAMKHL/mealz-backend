@@ -1,6 +1,7 @@
-FROM php:8.2-fpm
+# Utiliser une image officielle PHP avec Apache
+FROM php:8.2-apache
 
-# Installer les dépendances de base
+# Installer les extensions PHP nécessaires
 RUN apt-get update && apt-get install -y \
     libpng-dev \
     libjpeg-dev \
@@ -19,13 +20,23 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Définir le dossier de travail
 WORKDIR /var/www
 
-# Copier le projet Laravel
+# Copier les fichiers Laravel
 COPY . .
 
-# Installer les dépendances Laravel sans blocage
-RUN COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader --no-progress --no-suggest
+# Installer les dépendances Laravel
+RUN composer install --no-dev --optimize-autoloader --no-progress --no-suggest
 
-# Exposer le port
-EXPOSE 9000
+# Définir les permissions
+RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
-CMD ["php-fpm"]
+# Activer le module rewrite d'Apache
+RUN a2enmod rewrite
+
+# Copier la configuration Apache
+COPY 000-default.conf /etc/apache2/sites-available/000-default.conf
+
+# Exposer le port HTTP
+EXPOSE 80
+
+# Démarrer Apache en premier plan
+CMD ["apache2-foreground"]
